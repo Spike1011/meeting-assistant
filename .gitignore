@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+*.env
+
+# Distribution / Packaging
+dist/
+build/
+*.egg-info/
+
+# PyInstaller
+*.spec
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# macOS
+.DS_Store
+
+# Project specific
+output/
+temp_recording.wav
+
+# Debug scripts
+debug_deepgram.py
+find_options.py
+verify_fix.py
+verify_genai.py
+test_summary.py
+test_models.py
+verify_summary_fix.py
+verify_summary_fix_2.py
