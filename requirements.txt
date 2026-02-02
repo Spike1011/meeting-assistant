@@ -1,0 +1,6 @@
+sounddevice
+soundfile
+numpy
+deepgram-sdk
+python-dotenv
+google-generativeai
