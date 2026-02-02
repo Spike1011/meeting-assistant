@@ -9,7 +9,8 @@ class DeepgramProcessor:
             raise ValueError("Deepgram API Key is missing.")
         self.api_key = api_key
         # Use keyword argument to avoid BaseClient initialization errors
-        self.client = DeepgramClient(api_key=api_key)
+        # Increased timeout to 600s (10 min) for large files
+        self.client = DeepgramClient(api_key=api_key, timeout=600)
 
     def process_audio(self, audio_path: str):
         """Transcribes audio file and returns formatted transcript with speaker diarization."""
