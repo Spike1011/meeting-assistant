@@ -23,6 +23,7 @@ build/
 # Project specific
 output/
 temp_recording.wav
+GEMINI.md
 
 # Debug scripts
 debug_deepgram.py
