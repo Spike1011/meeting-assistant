@@ -26,8 +26,14 @@ $(VENV)/bin/activate: requirements.txt
 
 install: $(VENV)/bin/activate
 	@if [ ! -f .env ]; then \
-		echo "[!] Warning: .env file not found. Creating from .env.example..."; \
-		cp .env.example .env; \
+		if [ -f .env.example ]; then \
+			echo "[*] Creating .env from .env.example..."; \
+			cp .env.example .env; \
+		else \
+			echo "[*] .env.example not found. Creating a blank .env..."; \
+			echo "DEEPGRAM_API_KEY=" > .env; \
+			echo "GEMINI_API_KEY=" >> .env; \
+		fi; \
 		echo "[!] Please edit .env and add your API keys!"; \
 	fi
 	@echo "[+] Installation complete."
