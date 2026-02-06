@@ -22,10 +22,13 @@ build/
 
 # Project specific
 output/
+temp_uploads/
+config.json
 temp_recording.wav
+*.wav
 GEMINI.md
 
-# Debug scripts
+# Debug and temporary scripts
 debug_deepgram.py
 find_options.py
 verify_fix.py
@@ -34,3 +37,5 @@ test_summary.py
 test_models.py
 verify_summary_fix.py
 verify_summary_fix_2.py
+test_native.py
+NATIVE_RECORDER_REPORT.md
