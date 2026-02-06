@@ -71,8 +71,9 @@ async def main(existing_audio_path: str = None):
             print(f"Recording failed: {e}")
             return
 
-    if not audio_path:
-        print("No audio recorded or provided.")
+    if not audio_path or not os.path.exists(audio_path) or os.path.getsize(audio_path) <= 44:
+        print("\nError: Audio file is empty or was not created correctly.")
+        print("Check if your microphone is working and permissions are granted.")
         return
 
     # 6. Transcribe
