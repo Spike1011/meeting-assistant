@@ -1,0 +1,23 @@
+{
+  "recording_method": "dual",
+  "api_keys": {
+    "deepgram": "b686d9f8177413b3252077d06ac7459b76a44697",
+    "gemini": "AIzaSyDnhJR8n9VsrjUDiFQiQ7UavsIctyaV_JE"
+  },
+  "legacy_settings": {
+    "device_name": "\u041c\u0438\u043a\u0440\u043e\u0444\u043e\u043d EarPods",
+    "samplerate": 48000,
+    "channels": null
+  },
+  "native_settings": {
+    "samplerate": 48000,
+    "exclude_current_process": true
+  },
+  "transcription": {
+    "model": "nova-2",
+    "language": "ru",
+    "diarize": true,
+    "smart_format": true,
+    "timeout": 600
+  }
+}

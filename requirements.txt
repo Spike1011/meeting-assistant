@@ -3,7 +3,13 @@ soundfile
 numpy
 deepgram-sdk
 python-dotenv
-google-generativeai
+google-generativeai  # Legacy, will be replaced by google-genai
+google-genai  # New recommended package
 fastapi
 uvicorn[standard]
 python-multipart
+pyobjc-framework-ScreenCaptureKit
+pyobjc-framework-AVFoundation
+pyobjc-framework-CoreAudio
+
+

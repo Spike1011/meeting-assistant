@@ -22,14 +22,14 @@ llm_key = os.getenv("LLM_API_KEY") or os.getenv("GEMINI_API_KEY")
 if not deepgram_key or not llm_key:
     # We'll log error but won't crash the import, 
     # but endpoints will fail if keys are missing
-    print("Warning: API keys missing in environment")
+    print("[!] Warning: API keys missing in environment")
 
 # Initialize components
 try:
     processor = DeepgramProcessor(api_key=deepgram_key) if deepgram_key else None
     summarizer = LLMSummarizer(api_key=llm_key) if llm_key else None
 except Exception as e:
-    print(f"Initialization Error: {e}")
+    print(f"[-] Initialization Error: {e}")
     processor = None
     summarizer = None
 
@@ -59,10 +59,10 @@ async def process_audio(file: UploadFile = File(...)):
 
     # 2. Process Audio
     try:
-        print(f"Starting transcription for {file.filename}...")
+        print(f"[*] Starting transcription for {file.filename}...")
         transcript = processor.process_audio(file_path)
         
-        print("Starting summarization...")
+        print("[*] Starting summarization...")
         summary = summarizer.summarize(transcript)
         
         return {
@@ -71,7 +71,7 @@ async def process_audio(file: UploadFile = File(...)):
             "summary": summary
         }
     except Exception as e:
-        print(f"Processing failed: {str(e)}")
+        print(f"[-] Processing failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
     finally:
         # 3. Cleanup temp file
