@@ -1,0 +1,19 @@
+{
+    "recording_method": "dual",
+    "legacy_settings": {
+        "device_name": "",
+        "samplerate": 48000,
+        "channels": null
+    },
+    "native_settings": {
+        "samplerate": 48000,
+        "exclude_current_process": true
+    },
+    "transcription": {
+        "model": "nova-2",
+        "language": "ru",
+        "diarize": true,
+        "smart_format": true,
+        "timeout": 600
+    }
+}

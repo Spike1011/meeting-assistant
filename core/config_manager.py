@@ -8,10 +8,6 @@ class ConfigManager:
     
     DEFAULT_CONFIG = {
         "recording_method": "legacy",
-        "api_keys": {
-            "deepgram": "",
-            "gemini": ""
-        },
         "legacy_settings": {
             "device_name": "Unit",
             "samplerate": 48000,
@@ -100,38 +96,21 @@ class ConfigManager:
         """Get native recorder settings."""
         return self.config.get("native_settings", self.DEFAULT_CONFIG["native_settings"])
     
-    # API Keys (with .env fallback)
+    def set_legacy_device_name(self, device_name: str) -> None:
+        """Set legacy recorder device name."""
+        if "legacy_settings" not in self.config:
+            self.config["legacy_settings"] = self.DEFAULT_CONFIG["legacy_settings"].copy()
+        self.config["legacy_settings"]["device_name"] = device_name
+        self.save()
+    
+    # API Keys (only from environment)
     def get_deepgram_api_key(self) -> Optional[str]:
-        """Get Deepgram API key from config or .env."""
-        # Try config first
-        key = self.config.get("api_keys", {}).get("deepgram", "")
-        if key:
-            return key
-        # Fallback to .env
+        """Get Deepgram API key from .env."""
         return os.getenv("DEEPGRAM_API_KEY")
     
     def get_gemini_api_key(self) -> Optional[str]:
-        """Get Gemini API key from config or .env."""
-        # Try config first
-        key = self.config.get("api_keys", {}).get("gemini", "")
-        if key:
-            return key
-        # Fallback to .env
+        """Get Gemini API key from .env."""
         return os.getenv("GEMINI_API_KEY") or os.getenv("LLM_API_KEY")
-    
-    def set_deepgram_api_key(self, key: str) -> None:
-        """Set Deepgram API key in config."""
-        if "api_keys" not in self.config:
-            self.config["api_keys"] = {}
-        self.config["api_keys"]["deepgram"] = key
-        self.save()
-    
-    def set_gemini_api_key(self, key: str) -> None:
-        """Set Gemini API key in config."""
-        if "api_keys" not in self.config:
-            self.config["api_keys"] = {}
-        self.config["api_keys"]["gemini"] = key
-        self.save()
     
     # Transcription Settings
     def get_transcription_settings(self) -> Dict[str, Any]:

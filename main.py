@@ -8,6 +8,7 @@ from core.config_manager import ConfigManager
 from recorder_factory import RecorderFactory
 from core.processor import DeepgramProcessor
 from core.summarizer import LLMSummarizer
+from core.utils.setup_utils import interactive_setup, check_first_run
 
 # Global recorder instance for signal handling
 recorder_instance = None
@@ -22,23 +23,31 @@ def signal_handler(sig, frame):
         print("\n\n[!] Interrupt received. Exiting...")
         sys.exit(0)
 
-async def main(existing_audio_path: str = None):
+async def main(existing_audio_path: str = None, force_setup: bool = False):
     global recorder_instance, start_datetime
     
+    # 1. Load configuration
+    try:
+        config = ConfigManager()
+    except Exception as e:
+        print(f"[-] Configuration Error: {e}")
+        return
+
+    # 2. Check for first run or forced setup
+    if force_setup or (not existing_audio_path and check_first_run(config)):
+        if not interactive_setup(config):
+            print("[-] Setup failed. Exiting.")
+            return
+
     print("[*] Meeting Assistant initialized.")
     print("-" * 60)
     
     # Set GRPC DNS resolver to prevent gRPC issues on macOS
     os.environ['GRPC_DNS_RESOLVER'] = 'native'
     
-    # 1. Load configuration
-    try:
-        config = ConfigManager()
-        print(f"[+] Configuration loaded")
-        print(f"    Recording method: {config.get_recording_method()}")
-    except Exception as e:
-        print(f"[-] Configuration Error: {e}")
-        return
+    # Show recording method
+    print(f"[+] Configuration loaded")
+    print(f"    Recording method: {config.get_recording_method()}")
     
     # 2. Get API keys
     deepgram_key = config.get_deepgram_api_key()
@@ -190,13 +199,18 @@ if __name__ == "__main__":
         type=str,
         help="Path to an existing audio file to transcribe and summarize"
     )
+    parser.add_argument(
+        "--setup",
+        action="store_true",
+        help="Run interactive setup to choose audio devices"
+    )
     args = parser.parse_args()
     
     if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
     try:
-        asyncio.run(main(existing_audio_path=args.file))
+        asyncio.run(main(existing_audio_path=args.file, force_setup=args.setup))
     except KeyboardInterrupt:
         print("\n\n[!] Program stopped by user.")
         sys.exit(0)
