@@ -110,6 +110,13 @@ class NativeRecorder:
     
     def _setup_writer(self, filepath: str):
         """Setup AVAssetWriter for the output file."""
+        # AVAssetWriter cannot overwrite files, so we must delete if exists
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception as e:
+                print(f"[!] Warning: Could not remove existing file {filepath}: {e}")
+
         url = NSURL.fileURLWithPath_(filepath)
         
         # Create asset writer (WAV)

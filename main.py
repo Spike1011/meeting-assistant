@@ -99,8 +99,9 @@ async def main(existing_audio_path: str = None, force_setup: bool = False):
     if existing_audio_path:
         session_dir = os.path.dirname(os.path.abspath(existing_audio_path))
     else:
-        folder_name = start_datetime.strftime("%Y_%m_%d %H:%M")
-        session_dir = os.path.join("output", folder_name)
+        # Include seconds to avoid collisions if restarted quickly
+        session_name = start_datetime.strftime("%Y_%m_%d %H:%M:%S")
+        session_dir = os.path.join("output", session_name)
         os.makedirs(session_dir, exist_ok=True)
     
     print(f"[*] Session directory: {session_dir}")
