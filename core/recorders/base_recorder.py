@@ -3,7 +3,13 @@ from typing import Optional, Dict, Any
 
 class BaseRecorder(ABC):
     """Abstract base class for audio recorders."""
-    
+
+    @property
+    @abstractmethod
+    def is_recording(self) -> bool:
+        """Return whether the recorder is currently recording."""
+        pass
+
     @abstractmethod
     def record(self, output_dir: str = "output", filename: Optional[str] = None) -> str:
         """

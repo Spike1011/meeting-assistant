@@ -41,6 +41,11 @@ def interactive_setup(config: ConfigManager):
         except ValueError:
             print("[!] Invalid input. Please enter a number.")
 
+    # 2. Set default method to 'dual'
+    config.set_recording_method("dual")
+    print(f"\n[*] Recording method set to: dual (Native + Microphone)")
+    print("    (Captures both system audio and your microphone)")
+
     print("\n[+] Setup complete! Configuration saved to config.json")
     print("-" * 60 + "\n")
     return True

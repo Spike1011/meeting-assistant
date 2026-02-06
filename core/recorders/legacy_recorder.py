@@ -33,6 +33,11 @@ class LegacyRecorder(BaseRecorder):
         self._stop_event = threading.Event()
         
         print(f"[*] Initialized LegacyRecorder: Device='{self.device_name}' (index {self.device_index}), Samplerate={self.samplerate}, Channels={self.channels}")
+
+    @property
+    def is_recording(self) -> bool:
+        """Return True if recording is in progress."""
+        return self._recording
     
     def _find_device_index(self) -> int:
         """Find audio device index by name."""

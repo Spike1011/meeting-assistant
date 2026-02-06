@@ -13,7 +13,7 @@ class MultiRecorder(BaseRecorder):
     
     def __init__(self, recorders: List[BaseRecorder]):
         self.recorders = recorders
-        self.is_recording = False
+        self._is_recording = False
         self.output_paths = []
         self.output_dir = "output"
         self.final_filename = "recording.wav"
@@ -27,7 +27,7 @@ class MultiRecorder(BaseRecorder):
         if not self.recorders:
             raise ValueError("MultiRecorder initialized with no sub-recorders")
             
-        self.is_recording = True
+        self._is_recording = True
         self.output_paths = []
         self.output_dir = output_dir
         self.final_filename = filename if filename else "recording.wav"
@@ -51,7 +51,7 @@ class MultiRecorder(BaseRecorder):
         print(f"[>] Concurrent recording started ({len(self.recorders)} streams)")
         
         # Wait until stop() is called. individual recorders will finish their own blocking record() calls.
-        while self.is_recording:
+        while self._is_recording:
             time.sleep(0.1)
             
         # Wait for all recorder threads to finish writing their files
@@ -86,9 +86,9 @@ class MultiRecorder(BaseRecorder):
 
     def stop(self) -> None:
         """Stop all recorders and signal record() to finish."""
-        if not self.is_recording:
+        if not self._is_recording:
             return
-            
+
         print("\n[*] Stopping all recording streams...")
         
         # 1. Stop each individual recorder
@@ -99,7 +99,12 @@ class MultiRecorder(BaseRecorder):
                 print(f"[!] Error stopping recorder: {e}")
         
         # 2. Set our own internal flag to False so record() continues to merge
-        self.is_recording = False
+        self._is_recording = False
+
+    @property
+    def is_recording(self) -> bool:
+        """Return True if currently recording."""
+        return self._is_recording
 
     def get_info(self) -> Dict[str, Any]:
         """Get info about all recorders."""

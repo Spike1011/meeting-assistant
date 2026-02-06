@@ -98,10 +98,15 @@ class NativeRecorder:
         self.stream = None
         self.delegate = None
         
-        print(f"\n[*] Native macOS Recorder Initialized")
+        print(f"[*] Native macOS Recorder Initialized")
         print(f"    ├─ Method: ScreenCaptureKit + AVAssetWriter")
         print(f"    ├─ Sample Rate: {self.samplerate} Hz")
         print(f"    └─ NO BlackHole required!")
+
+    @property
+    def is_recording(self) -> bool:
+        """Return True if currently recording."""
+        return self.is_writing
     
     def _setup_writer(self, filepath: str):
         """Setup AVAssetWriter for the output file."""
