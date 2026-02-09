@@ -75,7 +75,7 @@ class LLMSummarizer:
         - (List of agreed decisions)
         
         ## Задачи
-        - [ ] (Task description) - Спикер N (если возможно определить)
+        - [ ] Спикер N (если возможно определить) - (Task description)
         
         If any section is not applicable, state "Не указано" or "Нет".
         Try to assign tasks to specific speakers based on the conversation context.
