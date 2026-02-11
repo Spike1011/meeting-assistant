@@ -72,14 +72,22 @@ python main.py
 ```
 
 Если программа запускается впервые или устройство записи не выбрано, запустится интерактивный мастер:
-```text
-[*] Meeting Assistant Setup
-------------------------------------------------------------
-[i] Available Audio Input Devices:
-    1. MacBook Pro Microphone (index 0, channels 1)
-    2. EarPods Microphone (index 2, channels 1)
 
-Select device number (1-2) [default: 1]:
+1. **Выбор аудиоустройства**:
+```text
+Select device number (1-7) [default: 1]:
+[+] Selected: Микрофон EarPods
+```
+
+2. **Выбор модели ИИ для суммаризации**:
+```text
+Available Models:
+    1. deepseek-chat (deepseek) - DeepSeek V3 (Recommended)
+    2. deepseek-reasoner (deepseek) - DeepSeek R1
+    3. gpt-4o (chatgpt) - ChatGPT 4o
+    4. gemini-2.0-flash (gemini) - Gemini 2.0 Flash
+    ...
+Select model number (1-6) [default: 1]:
 ```
 
 ### Смена устройства
@@ -146,7 +154,7 @@ meeting-assistant/
 ├── core/
 │   ├── config_manager.py      # Управление конфигурацией
 │   ├── processor.py           # Deepgram интеграция + retry logic
-│   ├── summarizer.py          # Gemini интеграция + retry logic
+│   ├── llm/                   # Модуль LLM (Gemini, DeepSeek, ChatGPT)
 │   ├── recorders/             # Движки записи (Legacy, Native, Multi)
 │   └── utils/
 │       ├── setup_utils.py     # Мастер настройки аудио
@@ -166,5 +174,7 @@ MIT License
 ## 🙏 Благодарности
 
 - [Deepgram](https://deepgram.com/) - за лучший API транскрибации
-- [Google Gemini](https://ai.google.dev/) - за мощный LLM
+- [DeepSeek](https://www.deepseek.com/) - за мощные и доступные LLM (V3/R1)
+- [OpenAI](https://openai.com/) - за ChatGPT
+- [Google Gemini](https://ai.google.dev/) - за Gemini API
 - [BlackHole](https://github.com/ExistentialAudio/BlackHole) - за виртуальный аудио-драйвер
