@@ -23,6 +23,10 @@ class ConfigManager:
             "diarize": True,
             "smart_format": True,
             "timeout": 600
+        },
+        "llm": {
+            "provider": "deepseek",
+            "model": "deepseek-chat"
         }
     }
     
@@ -103,7 +107,7 @@ class ConfigManager:
         self.config["legacy_settings"]["device_name"] = device_name
         self.save()
     
-    # API Keys (only from environment)
+    # API Keys (only from environment or config override)
     def get_deepgram_api_key(self) -> Optional[str]:
         """Get Deepgram API key from .env."""
         return os.getenv("DEEPGRAM_API_KEY")
@@ -111,7 +115,52 @@ class ConfigManager:
     def get_gemini_api_key(self) -> Optional[str]:
         """Get Gemini API key from .env."""
         return os.getenv("GEMINI_API_KEY") or os.getenv("LLM_API_KEY")
+
+    def get_openai_api_key(self) -> Optional[str]:
+        """Get OpenAI API key from .env."""
+        return os.getenv("OPENAI_API_KEY")
+
+    def get_deepseek_api_key(self) -> Optional[str]:
+        """Get DeepSeek API key from .env."""
+        return os.getenv("DEEPSEEK_API_KEY")
     
+    # LLM Settings
+    def get_llm_settings(self) -> Dict[str, Any]:
+        """Get LLM settings."""
+        return self.config.get("llm", self.DEFAULT_CONFIG["llm"])
+    
+    def get_llm_provider_type(self) -> str:
+        """Get LLM provider type (gemini/deepseek)."""
+        return self.get_llm_settings().get("provider", "gemini")
+    
+    def get_llm_model_name(self) -> str:
+        """Get LLM model name."""
+        return self.get_llm_settings().get("model", "gemini-2.0-flash")
+
+    def get_llm_api_key(self, provider: str = None) -> Optional[str]:
+        """
+        Get API key for the specified provider from environment variables.
+        """
+        if not provider:
+            provider = self.get_llm_provider_type()
+            
+        if provider == "gemini":
+            return self.get_gemini_api_key()
+        elif provider == "deepseek":
+            return self.get_deepseek_api_key()
+        elif provider == "chatgpt":
+            return self.get_openai_api_key()
+        return None
+
+    def set_llm_provider(self, provider: str, model: str) -> None:
+        """Set LLM provider and model."""
+        if "llm" not in self.config:
+            self.config["llm"] = self.DEFAULT_CONFIG["llm"].copy()
+            
+        self.config["llm"]["provider"] = provider
+        self.config["llm"]["model"] = model
+        self.save()
+
     # Transcription Settings
     def get_transcription_settings(self) -> Dict[str, Any]:
         """Get transcription settings."""

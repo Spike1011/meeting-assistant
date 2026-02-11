@@ -41,7 +41,44 @@ def interactive_setup(config: ConfigManager):
         except ValueError:
             print("[!] Invalid input. Please enter a number.")
 
-    # 2. Set default method to 'dual'
+    # 2. Select LLM Provider and Model
+    print("\n" + "-" * 60)
+    print("[*] LLM Configuration")
+    print("    Select which AI model to use for summarization.")
+    print("-" * 60)
+    
+    llm_options = [
+        ("deepseek", "deepseek-chat", "DeepSeek V3 (Recommended, requires DEEPSEEK_API_KEY)"),
+        ("deepseek", "deepseek-reasoner", "DeepSeek R1 (Thinking Model)"),
+        ("chatgpt", "gpt-4o", "ChatGPT 4o (Requires OPENAI_API_KEY)"),
+        ("chatgpt", "gpt-4o-mini", "ChatGPT 4o-mini (Faster/Cheaper)"),
+        ("gemini", "gemini-2.0-flash", "Gemini 2.0 Flash (Fast)"),
+        ("gemini", "gemini-1.5-flash", "Gemini 1.5 Flash (Legacy)")
+    ]
+    
+    print("\nAvailable Models:")
+    for i, (provider, model, desc) in enumerate(llm_options):
+        print(f"    {i+1}. {model} ({provider}) - {desc}")
+        
+    while True:
+        try:
+            choice = input(f"\nSelect model number (1-{len(llm_options)}) [default: 1]: ").strip()
+            if not choice:
+                selected_idx = 0
+            else:
+                selected_idx = int(choice) - 1
+                
+            if 0 <= selected_idx < len(llm_options):
+                provider, model, _ = llm_options[selected_idx]
+                config.set_llm_provider(provider, model)
+                print(f"[+] Selected: {model} ({provider})")
+                break
+            else:
+                print(f"[!] Please enter a number between 1 and {len(llm_options)}")
+        except ValueError:
+            print("[!] Invalid input. Please enter a number.")
+
+    # 3. Set default method to 'dual'
     config.set_recording_method("dual")
     print(f"\n[*] Recording method set to: dual (Native + Microphone)")
     print("    (Captures both system audio and your microphone)")

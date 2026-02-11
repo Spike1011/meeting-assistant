@@ -7,7 +7,7 @@ from datetime import datetime
 from core.config_manager import ConfigManager
 from recorder_factory import RecorderFactory
 from core.processor import DeepgramProcessor
-from core.summarizer import LLMSummarizer
+from core.llm import create_llm_provider
 from core.utils.setup_utils import interactive_setup, check_first_run
 
 # Global recorder instance for signal handling
@@ -51,13 +51,13 @@ async def main(existing_audio_path: str = None, force_setup: bool = False):
     
     # 2. Get API keys
     deepgram_key = config.get_deepgram_api_key()
-    gemini_key = config.get_gemini_api_key()
+    llm_key = config.get_llm_api_key()
     
     if not deepgram_key:
         print("[-] Error: DEEPGRAM_API_KEY is missing in .env or config.json")
         return
-    if not gemini_key:
-        print("[-] Error: GEMINI_API_KEY is missing in .env or config.json")
+    if not llm_key:
+        print(f"[-] Error: API Key for {config.get_llm_provider_type()} is missing. Check .env or config.json")
         return
     
     print("[+] API keys validated")
@@ -86,8 +86,10 @@ async def main(existing_audio_path: str = None, force_setup: bool = False):
         )
         print("[+] Transcription processor initialized")
         
-        summarizer = LLMSummarizer(api_key=gemini_key, max_retries=3)
-        print("[+] Summarizer initialized")
+        print("[+] Transcription processor initialized")
+        
+        summarizer = create_llm_provider(config)
+        print(f"[+] Summarizer initialized ({config.get_llm_model_name()})")
         
     except Exception as e:
         print(f"[-] Initialization Error: {e}")
@@ -182,9 +184,16 @@ async def main(existing_audio_path: str = None, force_setup: bool = False):
         print(f"[+] Summary saved to: {summary_path}")
         
     except Exception as e:
-        print(f"[-] Summarization failed: {e}")
-        import traceback
-        traceback.print_exc()
+        error_str = str(e)
+        # Suppress traceback for known credit/quota errors
+        is_known_error = any(msg in error_str for msg in ["402", "Insufficient Balance", "insufficient_quota", "429"])
+        
+        if is_known_error:
+             print(f"[-] Summarization failed: LLM Quota or Balance issue.")
+        else:
+            print(f"[-] Summarization failed: {e}")
+            import traceback
+            traceback.print_exc()
     
     print("\n" + "-" * 60)
     print(f"[+] Done! All files generated in: {session_dir}")

@@ -4,7 +4,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from core.processor import DeepgramProcessor
-from core.summarizer import LLMSummarizer
+from core.llm import create_llm_provider
+from core.config_manager import ConfigManager
 
 # Load environment variables
 load_dotenv()
@@ -15,9 +16,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# 1. Setup keys
-deepgram_key = os.getenv("DEEPGRAM_API_KEY")
-llm_key = os.getenv("LLM_API_KEY") or os.getenv("GEMINI_API_KEY")
+# 1. Setup keys & Config
+config = ConfigManager()
+deepgram_key = config.get_deepgram_api_key()
+llm_key = config.get_llm_api_key()
 
 if not deepgram_key or not llm_key:
     # We'll log error but won't crash the import, 
@@ -27,7 +29,7 @@ if not deepgram_key or not llm_key:
 # Initialize components
 try:
     processor = DeepgramProcessor(api_key=deepgram_key) if deepgram_key else None
-    summarizer = LLMSummarizer(api_key=llm_key) if llm_key else None
+    summarizer = create_llm_provider(config) if llm_key else None
 except Exception as e:
     print(f"[-] Initialization Error: {e}")
     processor = None

@@ -1,6 +1,6 @@
-import os
 import time
 from datetime import datetime
+from .base import LLMProvider
 
 try:
     # Try new google.genai first
@@ -12,42 +12,33 @@ except ImportError:
     import google.generativeai as genai
     USE_NEW_API = False
 
-class LLMSummarizer:
-    """Generates meeting summaries via LLM (Google Gemini) with retry logic."""
-    
-    def __init__(self, api_key: str, max_retries: int = 3):
-        if not api_key:
-            raise ValueError("LLM API Key is missing.")
-        
+class GeminiProvider(LLMProvider):
+    """Generates meeting summaries via Google Gemini."""
+
+    def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash", max_retries: int = 3):
+        super().__init__(api_key, model_name)
         self.max_retries = max_retries
         
+        if not api_key:
+            raise ValueError("Gemini API Key is missing.")
+
         if USE_NEW_API:
             # New google.genai API
             self.client = genai.Client(api_key=api_key)
-            self.model_name = 'gemini-2.0-flash' # Use stable 2.0 flash
         else:
             # Legacy google.generativeai API
             genai.configure(api_key=api_key)
             try:
-                self.model = genai.GenerativeModel('gemini-2.0-flash')
+                self.model = genai.GenerativeModel(self.model_name)
             except Exception:
-                # Fallback
-                print("[!] Gemini 2.0 Flash stable not available, trying 1.5 flash")
-                self.model = genai.GenerativeModel('gemini-1.5-flash')
-
+                # Fallback handled in summarize if model is invalid/unavailable
+                pass
 
     def summarize(self, transcript: str, meeting_datetime: datetime = None) -> str:
         """
         Generates a summary from the transcript using Gemini with retry logic.
-        
-        Args:
-            transcript: The meeting transcript text
-            meeting_datetime: Optional datetime of when the meeting occurred
-            
-        Returns:
-            Formatted Markdown summary
         """
-        print("Generating summary with Gemini...")
+        print(f"Generating summary with Gemini ({self.model_name})...")
         
         # Format meeting date/time
         if meeting_datetime:
@@ -94,9 +85,11 @@ class LLMSummarizer:
                         return response.text
                     except Exception as e:
                         error_str = str(e)
-                        # 404 or 429 Handle
+                        # 404 or 429 Handle - specific fallback logic for Gemini 2.0 Flash
                         if (("404" in error_str) or ("429" in error_str)) and self.model_name == 'gemini-2.0-flash':
                             print(f"[!] Gemini 2.0 Flash issue, falling back to gemini-flash-latest")
+                            # Create a temporary fallback instance or just change model name
+                            # Changing model name locally for retry
                             self.model_name = 'gemini-flash-latest'
                             return self.summarize(transcript, meeting_datetime)
                         
@@ -107,9 +100,23 @@ class LLMSummarizer:
                         raise
                 else:
                     # Legacy API
-                    response = self.model.generate_content(prompt)
-                    return response.text
-                
+                    # Ensure model is initialized with current model_name
+                    if not hasattr(self, 'model') or self.model.model_name != f"models/{self.model_name}" and self.model.model_name != self.model_name:
+                         self.model = genai.GenerativeModel(self.model_name)
+
+                    try:
+                        response = self.model.generate_content(prompt)
+                        return response.text
+                    except Exception as e:
+                         # Fallback for legacy if 2.0 fails
+                        if "404" in str(e) and self.model_name == 'gemini-2.0-flash':
+                             print(f"[!] Gemini 2.0 Flash stable not available, trying 1.5 flash")
+                             self.model_name = 'gemini-1.5-flash'
+                             self.model = genai.GenerativeModel(self.model_name)
+                             # Retry immediately
+                             continue
+                        raise e
+
             except Exception as e:
                 error_msg = str(e)
                 
@@ -127,5 +134,3 @@ class LLMSummarizer:
                 else:
                     print(f"[-] LLM Error after {attempt + 1} attempts: {e}")
                     raise
-
-
