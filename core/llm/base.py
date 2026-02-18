@@ -9,13 +9,14 @@ class LLMProvider(ABC):
         self.model_name = model_name
 
     @abstractmethod
-    def summarize(self, transcript: str, meeting_datetime: datetime = None) -> str:
+    def summarize(self, transcript: str, meeting_datetime: datetime = None, mode: str = "meeting") -> str:
         """
         Generates a summary from the transcript.
 
         Args:
             transcript: The meeting transcript text.
             meeting_datetime: Optional datetime of when the meeting occurred.
+            mode: Summarization mode ("meeting", "english", "interview"). Defaults to "meeting".
 
         Returns:
             Formatted Markdown summary.

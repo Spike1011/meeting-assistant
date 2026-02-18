@@ -1,6 +1,7 @@
 import time
 from datetime import datetime
 from .base import LLMProvider
+from core.utils.prompt_manager import PromptManager
 
 try:
     # Try new google.genai first
@@ -34,43 +35,25 @@ class GeminiProvider(LLMProvider):
                 # Fallback handled in summarize if model is invalid/unavailable
                 pass
 
-    def summarize(self, transcript: str, meeting_datetime: datetime = None) -> str:
+    def summarize(self, transcript: str, meeting_datetime: datetime = None, mode: str = "meeting") -> str:
         """
         Generates a summary from the transcript using Gemini with retry logic.
+        
+        Args:
+            transcript: The meeting transcript text.
+            meeting_datetime: Optional datetime of when the meeting occurred.
+            mode: Summarization mode ("meeting", "english", "interview"). Defaults to "meeting".
         """
-        print(f"Generating summary with Gemini ({self.model_name})...")
+        print(f"Generating summary with Gemini ({self.model_name}) in {mode} mode...")
         
-        # Format meeting date/time
-        if meeting_datetime:
-            date_str = meeting_datetime.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Get mode-specific prompt
+        prompt_instance = PromptManager.get_prompt(mode)
+        system_prompt = prompt_instance.get_system_prompt()
+        user_prompt = prompt_instance.format_user_prompt(transcript, meeting_datetime)
         
-        prompt = f"""
-        You are an expert meeting assistant. Analyze the following meeting transcript. Result must be in Russian.
-        
-        Meeting Date/Time: {date_str}
-        
-        Transcript:
-        {transcript}
-        
-        Please provide a concise summary in Markdown format with the following sections:
-        
-        ## Дата и время встречи
-        {date_str}
-        
-        ## Ключевые темы
-        - (List of main topics discussed)
-        
-        ## Решения
-        - (List of agreed decisions)
-        
-        ## Задачи
-        - [ ] Спикер N (если возможно определить) - (Task description)
-        
-        If any section is not applicable, state "Не указано" or "Нет".
-        Try to assign tasks to specific speakers based on the conversation context.
-        """
+        # Combine system and user prompts for Gemini
+        # For Gemini, we can include system instruction in the prompt or use system_instruction parameter if available
+        full_prompt = f"{system_prompt}\n\n{user_prompt}"
         
         # Retry with exponential backoff
         for attempt in range(self.max_retries):
@@ -78,11 +61,23 @@ class GeminiProvider(LLMProvider):
                 if USE_NEW_API:
                     # New API
                     try:
-                        response = self.client.models.generate_content(
-                            model=self.model_name,
-                            contents=prompt
-                        )
-                        return response.text
+                        # Try with system_instruction parameter if available
+                        try:
+                            response = self.client.models.generate_content(
+                                model=self.model_name,
+                                contents=user_prompt,
+                                config=types.GenerateContentConfig(
+                                    system_instruction=system_prompt
+                                )
+                            )
+                            return response.text
+                        except (TypeError, AttributeError):
+                            # Fallback: include system prompt in contents if system_instruction not supported
+                            response = self.client.models.generate_content(
+                                model=self.model_name,
+                                contents=full_prompt
+                            )
+                            return response.text
                     except Exception as e:
                         error_str = str(e)
                         # 404 or 429 Handle - specific fallback logic for Gemini 2.0 Flash
@@ -91,7 +86,7 @@ class GeminiProvider(LLMProvider):
                             # Create a temporary fallback instance or just change model name
                             # Changing model name locally for retry
                             self.model_name = 'gemini-flash-latest'
-                            return self.summarize(transcript, meeting_datetime)
+                            return self.summarize(transcript, meeting_datetime, mode)
                         
                         # If even fallback is exhausted, we need to wait
                         if "429" in error_str:
@@ -105,7 +100,8 @@ class GeminiProvider(LLMProvider):
                          self.model = genai.GenerativeModel(self.model_name)
 
                     try:
-                        response = self.model.generate_content(prompt)
+                        # Legacy API: include system prompt in the content
+                        response = self.model.generate_content(full_prompt)
                         return response.text
                     except Exception as e:
                          # Fallback for legacy if 2.0 fails

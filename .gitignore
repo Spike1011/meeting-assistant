@@ -27,6 +27,9 @@ config.json
 temp_recording.wav
 *.wav
 GEMINI.md
+.cursorignore
+.cursorrules
+PROMTS/
 
 # Debug and temporary scripts
 debug_deepgram.py

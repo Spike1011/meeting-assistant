@@ -9,6 +9,7 @@ from recorder_factory import RecorderFactory
 from core.processor import DeepgramProcessor
 from core.llm import create_llm_provider
 from core.utils.setup_utils import interactive_setup, check_first_run
+from core.utils.prompt_manager import PromptManager
 
 # Global recorder instance for signal handling
 recorder_instance = None
@@ -23,7 +24,50 @@ def signal_handler(sig, frame):
         print("\n\n[!] Interrupt received. Exiting...")
         sys.exit(0)
 
-async def main(existing_audio_path: str = None, force_setup: bool = False):
+def select_mode_interactive() -> str:
+    """
+    Interactive mode selection menu.
+    
+    Returns:
+        Selected mode string ("meeting", "english", or "interview")
+    """
+    print("\n" + "-" * 60)
+    print("[*] Select Summarization Mode")
+    print("-" * 60)
+    print("    1. Meeting (Standard)")
+    print("    2. English Lesson")
+    print("    3. Interview")
+    print("-" * 60)
+    
+    valid_modes = PromptManager.get_valid_modes()
+    mode_map = {
+        "1": "meeting",
+        "2": "english",
+        "3": "interview"
+    }
+    
+    while True:
+        try:
+            choice = input(f"\nSelect mode (1-3) [default: 1]: ").strip()
+            if not choice:
+                choice = "1"
+            
+            if choice in mode_map:
+                selected_mode = mode_map[choice]
+                mode_names = {
+                    "meeting": "Meeting (Standard)",
+                    "english": "English Lesson",
+                    "interview": "Interview"
+                }
+                print(f"[+] Selected: {mode_names[selected_mode]}")
+                return selected_mode
+            else:
+                print("[!] Please enter a number between 1 and 3")
+        except (ValueError, KeyboardInterrupt):
+            print("[!] Invalid input. Please enter a number.")
+            raise
+
+async def main(existing_audio_path: str = None, force_setup: bool = False, mode: str = None):
     global recorder_instance, start_datetime
     
     # 1. Load configuration
@@ -37,6 +81,27 @@ async def main(existing_audio_path: str = None, force_setup: bool = False):
     if force_setup or (not existing_audio_path and check_first_run(config)):
         if not interactive_setup(config):
             print("[-] Setup failed. Exiting.")
+            return
+
+    # 2.5. Mode selection
+    if mode is None:
+        try:
+            mode = select_mode_interactive()
+        except KeyboardInterrupt:
+            print("\n\n[!] Mode selection cancelled. Exiting.")
+            return
+    else:
+        # Validate provided mode
+        try:
+            PromptManager.get_prompt(mode)  # This will raise ValueError if invalid
+            mode_names = {
+                "meeting": "Meeting (Standard)",
+                "english": "English Lesson",
+                "interview": "Interview"
+            }
+            print(f"[+] Mode: {mode_names.get(mode, mode)}")
+        except ValueError as e:
+            print(f"[-] Invalid mode: {e}")
             return
 
     print("[*] Meeting Assistant initialized.")
@@ -171,7 +236,7 @@ async def main(existing_audio_path: str = None, force_setup: bool = False):
     print("-" * 60)
     
     try:
-        summary = summarizer.summarize(transcript, meeting_datetime=start_datetime)
+        summary = summarizer.summarize(transcript, meeting_datetime=start_datetime, mode=mode)
         
         # Save summary with timestamp
         summary_filename = f"summary_{timestamp_str}.md"
@@ -214,13 +279,19 @@ if __name__ == "__main__":
         action="store_true",
         help="Run interactive setup to choose audio devices"
     )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["meeting", "english", "interview"],
+        help="Summarization mode: 'meeting' (standard), 'english' (lesson), or 'interview'"
+    )
     args = parser.parse_args()
     
     if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
     try:
-        asyncio.run(main(existing_audio_path=args.file, force_setup=args.setup))
+        asyncio.run(main(existing_audio_path=args.file, force_setup=args.setup, mode=args.mode))
     except KeyboardInterrupt:
         print("\n\n[!] Program stopped by user.")
         sys.exit(0)

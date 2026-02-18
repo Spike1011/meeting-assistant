@@ -2,6 +2,7 @@ import time
 from datetime import datetime
 from openai import OpenAI
 from .base import LLMProvider
+from core.utils.prompt_manager import PromptManager
 
 class ChatGPTProvider(LLMProvider):
     """Generates meeting summaries via OpenAI ChatGPT."""
@@ -15,43 +16,21 @@ class ChatGPTProvider(LLMProvider):
 
         self.client = OpenAI(api_key=api_key)
 
-    def summarize(self, transcript: str, meeting_datetime: datetime = None) -> str:
+    def summarize(self, transcript: str, meeting_datetime: datetime = None, mode: str = "meeting") -> str:
         """
         Generates a summary from the transcript using ChatGPT.
+        
+        Args:
+            transcript: The meeting transcript text.
+            meeting_datetime: Optional datetime of when the meeting occurred.
+            mode: Summarization mode ("meeting", "english", "interview"). Defaults to "meeting".
         """
-        print(f"Generating summary with ChatGPT ({self.model_name})...")
+        print(f"Generating summary with ChatGPT ({self.model_name}) in {mode} mode...")
         
-        # Format meeting date/time
-        if meeting_datetime:
-            date_str = meeting_datetime.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        system_prompt = "You are an expert meeting assistant. Analyze the meeting transcript and provide a summary in Russian."
-        
-        user_prompt = f"""
-        Meeting Date/Time: {date_str}
-        
-        Transcript:
-        {transcript}
-        
-        Please provide a concise summary in Markdown format with the following sections:
-        
-        ## Дата и время встречи
-        {date_str}
-        
-        ## Ключевые темы
-        - (List of main topics discussed)
-        
-        ## Решения
-        - (List of agreed decisions)
-        
-        ## Задачи
-        - [ ] Спикер N (если возможно определить) - (Task description)
-        
-        If any section is not applicable, state "Не указано" or "Нет".
-        Try to assign tasks to specific speakers based on the conversation context.
-        """
+        # Get mode-specific prompt
+        prompt_instance = PromptManager.get_prompt(mode)
+        system_prompt = prompt_instance.get_system_prompt()
+        user_prompt = prompt_instance.format_user_prompt(transcript, meeting_datetime)
         
         # Retry with exponential backoff
         for attempt in range(self.max_retries):
