@@ -30,6 +30,7 @@ GEMINI.md
 .cursorignore
 .cursorrules
 PROMTS/
+docs/
 
 # Debug and temporary scripts
 debug_deepgram.py
