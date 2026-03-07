@@ -169,19 +169,36 @@ python api.py
 ```
 meeting-assistant/
 ├── core/
-│   ├── config_manager.py      # Управление конфигурацией
-│   ├── processor.py           # Deepgram интеграция + retry logic
+│   ├── config_manager.py      # Загрузка/сохранение конфигурации
+│   ├── processor.py           # Транскрибация Deepgram + post‑обработка
+│   ├── recorder.py            # Вспомогательная логика выбора рекордера
 │   ├── llm/                   # Модуль LLM (Gemini, DeepSeek, ChatGPT)
+│   │   ├── base.py            # Базовый класс провайдера LLM
+│   │   ├── deepseek_provider.py   # DeepSeek V3/R1
+│   │   ├── gemini_provider.py     # Gemini 2.0 Flash и fallback
+│   │   ├── chatgpt_provider.py    # OpenAI GPT‑4o / 4o‑mini
+│   │   └── prompts/               # Промпты для режимов саммари
+│   │       ├── base_prompt.py
+│   │       ├── meeting_prompt.py
+│   │       ├── english_prompt.py
+│   │       └── interview_prompt.py
 │   ├── recorders/             # Движки записи (Legacy, Native, Multi)
+│   │   ├── base_recorder.py   # Общий интерфейс рекордера
+│   │   ├── legacy_recorder.py # Захват через Aggregate Device (BlackHole)
+│   │   ├── native_recorder.py # Нативный macOS ScreenCaptureKit
+│   │   └── multi_recorder.py  # Объединение системного звука и микрофона
 │   └── utils/
-│       ├── setup_utils.py     # Мастер настройки аудио
-│       └── audio_utils.py     # Обработка аудиофайлов
+│       ├── setup_utils.py     # Мастер настройки аудио и конфигурации
+│       ├── audio_utils.py     # Обработка аудиофайлов
+│       └── prompt_manager.py  # Управление выбором промптов/режимов
+├── recorder_factory.py        # Фабрика выбора рекордера по конфигу
 ├── main.py                    # CLI точка входа
-├── api.py                     # FastAPI сервер
+├── api.py                     # FastAPI сервер (Web API)
 ├── config.example.json        # Шаблон конфигурации
 ├── config.json                # Локальная конфигурация (игнорируется Git)
 ├── .env                       # API ключи (игнорируется Git)
-└── requirements.txt
+├── Makefile                   # Утилитарные команды (install/run/api/clean)
+└── requirements.txt           # Python‑зависимости
 ```
 
 ## 📄 Лицензия
