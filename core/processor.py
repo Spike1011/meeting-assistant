@@ -1,6 +1,6 @@
 import os
-import json
 import time
+from typing import Iterator
 from deepgram import DeepgramClient
 
 class DeepgramProcessor:
@@ -19,6 +19,27 @@ class DeepgramProcessor:
         # Use keyword argument to avoid BaseClient initialization errors
         self.client = DeepgramClient(api_key=api_key, timeout=timeout)
 
+    @staticmethod
+    def _iter_file_chunks(audio_path: str, chunk_size: int = 1024 * 1024) -> Iterator[bytes]:
+        """Stream file in chunks to avoid loading the full WAV into memory."""
+        with open(audio_path, "rb") as file:
+            while True:
+                chunk = file.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+
+    def _build_request_timeout(self, audio_path: str) -> int:
+        """
+        Build a safer per-request timeout for large uploads.
+
+        Uses a conservative upload speed estimate (32 KB/s) and
+        adds a fixed processing/network buffer.
+        """
+        file_size = os.path.getsize(audio_path)
+        estimated_upload_seconds = int(file_size / (32 * 1024))
+        return max(self.timeout, estimated_upload_seconds + 180)
+
     def process_audio(self, audio_path: str, model: str = "nova-2", language: str = "ru") -> str:
         """
         Transcribes audio file and returns formatted transcript with speaker diarization.
@@ -32,16 +53,21 @@ class DeepgramProcessor:
         # Retry with exponential backoff
         for attempt in range(self.max_retries):
             try:
-                with open(audio_path, "rb") as file:
-                    buffer_data = file.read()
+                request_timeout = self._build_request_timeout(audio_path)
+                request_options = {
+                    "timeout_in_seconds": request_timeout,
+                    # SDK internal retries are disabled because we handle retries below.
+                    "max_retries": 0,
+                }
 
                 # Correct call for deepgram-sdk v5+
                 response = self.client.listen.v1.media.transcribe_file(
-                    request=buffer_data,
+                    request=self._iter_file_chunks(audio_path),
                     model=model,
                     diarize=True,
                     smart_format=True,
                     language=language,
+                    request_options=request_options,
                 )
                 
                 # Parse response
@@ -52,7 +78,7 @@ class DeepgramProcessor:
                 
                 # Check if it's a retryable error
                 is_retryable = any(keyword in error_msg.lower() for keyword in [
-                    'connection', 'timeout', 'network', 'dns', 'temporary'
+                    'connection', 'timeout', 'network', 'dns', 'temporary', 'ssl', 'eof'
                 ])
                 
                 if attempt < self.max_retries - 1 and is_retryable:

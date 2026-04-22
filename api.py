@@ -45,6 +45,64 @@ class SummarizationMode(str, Enum):
     interview = "interview"
 
 
+class GeminiRegionBlockedError(RuntimeError):
+    """Raised when Gemini is unavailable in the current user region."""
+
+
+def _ascii_safe_header_value(value: str, max_len: int = 500) -> str:
+    """Convert arbitrary text to a latin-1 safe HTTP header value."""
+    return value.encode("ascii", "replace").decode("ascii")[:max_len]
+
+
+def _summarize_with_provider_fallback(transcript: str, meeting_mode: str = "meeting") -> str:
+    """
+    Summarize transcript with default provider, then fallback if Gemini is region-blocked.
+    """
+    default_provider = config.get_llm_provider_type()
+    primary_summarizer = create_llm_provider(config, provider_type=default_provider)
+
+    try:
+        return primary_summarizer.summarize(transcript, mode=meeting_mode)
+    except Exception as e:
+        error_msg = str(e).lower()
+        gemini_region_blocked = (
+            default_provider == "gemini"
+            and (
+                "user location is not supported" in error_msg
+                or "location is not supported" in error_msg
+            )
+            and ("failed_precondition" in error_msg or "400" in error_msg)
+        )
+        if not gemini_region_blocked:
+            raise
+
+        print("[!] Gemini region restriction detected. Trying fallback providers...")
+        fallback_errors = []
+        tried_provider = False
+        for provider_name in ("deepseek", "chatgpt"):
+            api_key = config.get_llm_api_key(provider_name)
+            if not api_key:
+                continue
+            tried_provider = True
+            try:
+                fallback_summarizer = create_llm_provider(config, provider_type=provider_name)
+                return fallback_summarizer.summarize(transcript, mode=meeting_mode)
+            except Exception as fallback_error:
+                fallback_errors.append(f"{provider_name}: {fallback_error}")
+                print(f"[!] Fallback provider '{provider_name}' failed: {fallback_error}")
+
+        if not tried_provider:
+            raise GeminiRegionBlockedError(
+                "Gemini недоступен в вашем регионе. Добавьте `DEEPSEEK_API_KEY` или "
+                "`OPENAI_API_KEY` в `.env`, либо смените `llm.provider` в `config.json`."
+            ) from e
+
+        raise GeminiRegionBlockedError(
+            "Gemini недоступен в вашем регионе, а fallback-провайдеры тоже завершились ошибкой: "
+            + "; ".join(fallback_errors)
+        ) from e
+
+
 # Initialize components
 try:
     processor = DeepgramProcessor(api_key=deepgram_key) if deepgram_key else None
@@ -66,12 +124,14 @@ async def health_check():
     description=(
         "Принимает аудиофайл, отправляет его в Deepgram для транскрибации и затем генерирует саммари "
         "с использованием LLM‑провайдера по умолчанию из config.json. "
+        "Тип саммаризации можно выбрать через параметр mode (meeting/english/interview). "
         "Если download=true, возвращает Markdown‑файл с саммари."
     ),
 )
 async def process_audio(
     file: UploadFile = File(...),
     download: bool = False,
+    mode: SummarizationMode = SummarizationMode.meeting,
 ):
     """
     Upload an audio file to transcribe and summarize using the default LLM provider from config.
@@ -94,25 +154,51 @@ async def process_audio(
     try:
         print(f"[*] Starting transcription for {file.filename}...")
         transcript = processor.process_audio(file_path)
+    except Exception as e:
+        print(f"[-] Transcription failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
+    summary = None
+    summary_error = None
+    try:
         print("[*] Starting summarization...")
-        summary = summarizer.summarize(transcript)
+        summary = _summarize_with_provider_fallback(transcript, meeting_mode=mode.value)
+    except Exception as e:
+        summary_error = str(e)
+        print(f"[!] Summarization failed, returning transcript only: {summary_error}")
 
+    try:
         if download:
             safe_name = os.path.splitext(file.filename or "meeting")[0] or "meeting"
-            md_bytes = summary.encode("utf-8")
+            if summary:
+                md_bytes = summary.encode("utf-8")
+                download_filename = f"{safe_name}_summary.md"
+            else:
+                transcript_md = (
+                    f"# Transcript\n\n"
+                    f"**Source file:** {file.filename}\n\n"
+                    f"---\n\n"
+                    f"{transcript}"
+                )
+                md_bytes = transcript_md.encode("utf-8")
+                download_filename = f"{safe_name}_transcript.md"
+
+            headers = {"Content-Disposition": f'attachment; filename="{download_filename}"'}
+            if summary_error:
+                headers["X-Summary-Error"] = _ascii_safe_header_value(summary_error)
+
             return StreamingResponse(
                 iter([md_bytes]),
                 media_type="text/markdown; charset=utf-8",
-                headers={
-                    "Content-Disposition": f'attachment; filename="{safe_name}_summary.md"'
-                },
+                headers=headers,
             )
 
         return {
             "filename": file.filename,
+            "mode": mode.value,
             "transcript": transcript,
             "summary": summary,
+            "summary_error": summary_error,
         }
     except Exception as e:
         print(f"[-] Processing failed: {str(e)}")
