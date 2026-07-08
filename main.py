@@ -3,11 +3,13 @@ import sys
 import signal
 import argparse
 import asyncio
+import re
 from datetime import datetime
 from core.config_manager import ConfigManager
 from recorder_factory import RecorderFactory
 from core.processor import DeepgramProcessor
 from core.llm import create_llm_provider
+from core.llm.base import normalize_meeting_title
 from core.utils.setup_utils import interactive_setup, check_first_run
 from core.utils.prompt_manager import PromptManager
 
@@ -66,6 +68,85 @@ def select_mode_interactive() -> str:
         except (ValueError, KeyboardInterrupt):
             print("[!] Invalid input. Please enter a number.")
             raise
+
+def _unique_directory_path(parent_dir: str, directory_name: str) -> str:
+    """Return a non-existing directory path by appending a numeric suffix if needed."""
+    candidate = os.path.join(parent_dir, directory_name)
+    if not os.path.exists(candidate):
+        return candidate
+
+    suffix = 2
+    while True:
+        candidate = os.path.join(parent_dir, f"{directory_name} {suffix}")
+        if not os.path.exists(candidate):
+            return candidate
+        suffix += 1
+
+def rename_session_dir_with_title(session_dir: str, title: str) -> str:
+    """Append a generated title to the timestamp-based session directory."""
+    safe_title = normalize_meeting_title(title)
+    parent_dir = os.path.dirname(session_dir)
+    time_prefix = os.path.basename(session_dir)
+    titled_name = f"{time_prefix} {safe_title}"
+    new_session_dir = _unique_directory_path(parent_dir, titled_name)
+
+    if os.path.abspath(new_session_dir) == os.path.abspath(session_dir):
+        return session_dir
+
+    os.rename(session_dir, new_session_dir)
+    return new_session_dir
+
+def derive_local_meeting_title(content: str, mode: str = "meeting") -> str:
+    """Build a best-effort title without an extra LLM call."""
+    text = content.lower()
+
+    if mode == "english" or "дата и время урока" in text or "new vocabulary" in text or "новая лексика" in text:
+        if "граммат" in text and "лексик" in text:
+            return "Урок английского лексика и грамматика"
+        return "Урок английского"
+
+    if "1-1" in text or "one-on-one" in text or "один на один" in text:
+        name_match = re.search(r"(?:1-1|one-on-one|один на один)\s+(?:с|with)\s+([А-ЯA-Z][а-яa-zё-]+)", content)
+        if name_match:
+            return f"1-1 с {name_match.group(1)}"
+        return "1-1 встреча"
+
+    scope = ""
+    if "flowwow" in text and "yudora" in text:
+        scope = " Flowwow и Yudora"
+    elif "flowwow" in text:
+        scope = " Flowwow"
+    elif "yudora" in text:
+        scope = " Yudora"
+
+    if ("командные метрики" in text or "jira" in text) and ("ии" in text or "кодекс" in text or "ai" in text):
+        return "Метрики Jira и AI"
+
+    if "грейдирован" in text and ("реорганизац" in text or "реструктуризац" in text):
+        return "Реорганизация и грейдирование"
+
+    if "реструктуризация и передача команд" in text or ("передача команд" in text and "интеграц" in text):
+        return "Передача команд и интеграций"
+
+    if "планирование следующего спринта" in text and ("чат" in text or "бот" in text):
+        return "Планирование чатов"
+
+    if "дейлик" in text or "daily" in text or "стендап" in text or "standup" in text:
+        return normalize_meeting_title(f"Дейлик{scope or ' команды'}")
+
+    planning_markers = ["план", "цели", "roadmap", "роадмап", "q2", "q3", "реорганизац", "реструктуризац"]
+    if any(marker in text for marker in planning_markers):
+        return normalize_meeting_title(f"Планы команд{scope}")
+
+    reporting_markers = ["отчет", "статус", "ключевые темы", "решения", "задачи"]
+    if any(marker in text for marker in reporting_markers) or text.count("команда") >= 3:
+        return normalize_meeting_title(f"Отчет команд{scope}")
+
+    topic_match = re.search(r"\*\*([^:*\\n]{4,50})", content)
+    if topic_match:
+        return normalize_meeting_title(topic_match.group(1))
+
+    return "Встреча"
 
 async def main(existing_audio_path: str = None, force_setup: bool = False, mode: str = None):
     global recorder_instance, start_datetime
@@ -165,11 +246,13 @@ async def main(existing_audio_path: str = None, force_setup: bool = False, mode:
     
     if existing_audio_path:
         session_dir = os.path.dirname(os.path.abspath(existing_audio_path))
+        should_rename_session_dir = False
     else:
         # Include seconds to avoid collisions if restarted quickly
         session_name = start_datetime.strftime("%Y_%m_%d %H:%M:%S")
         session_dir = os.path.join("output", session_name)
         os.makedirs(session_dir, exist_ok=True)
+        should_rename_session_dir = True
     
     print(f"[*] Session directory: {session_dir}")
     print("-" * 60)
@@ -235,6 +318,7 @@ async def main(existing_audio_path: str = None, force_setup: bool = False, mode:
     print("[*] Starting Summarization")
     print("-" * 60)
     
+    summary = None
     try:
         summary = summarizer.summarize(transcript, meeting_datetime=start_datetime, mode=mode)
         
@@ -259,6 +343,22 @@ async def main(existing_audio_path: str = None, force_setup: bool = False, mode:
             print(f"[-] Summarization failed: {e}")
             import traceback
             traceback.print_exc()
+
+    if should_rename_session_dir:
+        try:
+            title_content = summary or transcript
+            meeting_title = derive_local_meeting_title(title_content, mode=mode)
+            title_source = "summary" if summary else "transcript"
+
+            renamed_session_dir = rename_session_dir_with_title(session_dir, meeting_title)
+            if renamed_session_dir != session_dir:
+                session_dir = renamed_session_dir
+                audio_path = os.path.join(session_dir, os.path.basename(audio_path))
+                print(f"[+] Session renamed to: {session_dir} ({title_source})")
+            else:
+                print(f"[+] Session title: {meeting_title} ({title_source})")
+        except Exception as e:
+            print(f"[!] Could not rename session folder: {e}")
     
     print("\n" + "-" * 60)
     print(f"[+] Done! All files generated in: {session_dir}")
@@ -295,4 +395,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\n[!] Program stopped by user.")
         sys.exit(0)
-

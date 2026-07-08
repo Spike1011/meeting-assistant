@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 from openai import OpenAI
-from .base import LLMProvider
+from .base import LLMProvider, TITLE_SYSTEM_PROMPT, build_title_user_prompt, normalize_meeting_title
 from core.utils.prompt_manager import PromptManager
 
 class ChatGPTProvider(LLMProvider):
@@ -68,3 +68,18 @@ class ChatGPTProvider(LLMProvider):
                     time.sleep(wait_time)
                 else:
                     raise
+
+    def generate_title(self, transcript: str, meeting_datetime: datetime = None, mode: str = "meeting") -> str:
+        """Generates a short folder title from the transcript using ChatGPT."""
+        print(f"Generating meeting title with ChatGPT ({self.model_name})...")
+
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                {"role": "system", "content": TITLE_SYSTEM_PROMPT},
+                {"role": "user", "content": build_title_user_prompt(transcript, mode)},
+            ],
+            stream=False,
+            temperature=0.2,
+        )
+        return normalize_meeting_title(response.choices[0].message.content)

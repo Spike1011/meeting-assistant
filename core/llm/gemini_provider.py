@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from .base import LLMProvider
+from .base import LLMProvider, TITLE_SYSTEM_PROMPT, build_title_user_prompt, normalize_meeting_title
 from core.utils.prompt_manager import PromptManager
 
 try:
@@ -130,3 +130,33 @@ class GeminiProvider(LLMProvider):
                 else:
                     print(f"[-] LLM Error after {attempt + 1} attempts: {e}")
                     raise
+
+    def generate_title(self, transcript: str, meeting_datetime: datetime = None, mode: str = "meeting") -> str:
+        """Generates a short folder title from the transcript using Gemini."""
+        print(f"Generating meeting title with Gemini ({self.model_name})...")
+
+        user_prompt = build_title_user_prompt(transcript, mode)
+        full_prompt = f"{TITLE_SYSTEM_PROMPT}\n\n{user_prompt}"
+
+        if USE_NEW_API:
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=user_prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=TITLE_SYSTEM_PROMPT,
+                        temperature=0.2,
+                    ),
+                )
+            except (TypeError, AttributeError):
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=full_prompt,
+                )
+            return normalize_meeting_title(response.text)
+
+        if not hasattr(self, 'model') or self.model.model_name != f"models/{self.model_name}" and self.model.model_name != self.model_name:
+            self.model = genai.GenerativeModel(self.model_name)
+
+        response = self.model.generate_content(full_prompt)
+        return normalize_meeting_title(response.text)
