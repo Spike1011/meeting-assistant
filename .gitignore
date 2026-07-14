@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 venv/
 .venv/
+apps/server/.venv/
 *.env
 
 # Distribution / Packaging
@@ -23,7 +24,9 @@ build/
 # Project specific
 output/
 temp_uploads/
+apps/server/temp_uploads/
 config.json
+apps/server/config.json
 temp_recording.wav
 *.wav
 GEMINI.md

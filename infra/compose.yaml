@@ -1,0 +1,29 @@
+services:
+  api:
+    build:
+      context: ../apps/server
+    env_file:
+      - ../apps/server/.env
+    volumes:
+      - meeting-data:/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  meeting-data:
+  caddy-data:
+  caddy-config:

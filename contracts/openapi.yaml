@@ -1,0 +1,140 @@
+openapi: 3.1.0
+info:
+  title: Meeting Assistant API
+  version: 1.0.0
+  description: Целевой контракт между сервером и тонкими клиентами.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /meetings:
+    post:
+      operationId: createMeeting
+      summary: Загрузить запись встречи
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, mode, recorded_at]
+              properties:
+                file: { type: string, format: binary }
+                mode: { $ref: '#/components/schemas/MeetingMode' }
+                recorded_at: { type: string, format: date-time }
+                duration_seconds: { type: integer, minimum: 0 }
+      responses:
+        '202':
+          description: Встреча принята в обработку
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Meeting' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    get:
+      operationId: listMeetings
+      summary: Получить историю встреч
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: cursor
+          schema: { type: string }
+      responses:
+        '200':
+          description: Страница истории
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Meeting' }
+                  next_cursor: { type: [string, 'null'] }
+  /meetings/{meeting_id}:
+    parameters:
+      - $ref: '#/components/parameters/MeetingId'
+    get:
+      operationId: getMeeting
+      responses:
+        '200':
+          description: Встреча и результаты обработки
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Meeting' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteMeeting
+      responses:
+        '204': { description: Встреча удалена }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /meetings/{meeting_id}/retry:
+    parameters:
+      - $ref: '#/components/parameters/MeetingId'
+    post:
+      operationId: retryMeeting
+      responses:
+        '202':
+          description: Повторная обработка запущена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Meeting' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    MeetingId:
+      in: path
+      name: meeting_id
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Unauthorized:
+      description: Неверный или отсутствующий API-токен
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Встреча не найдена
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    MeetingMode:
+      type: string
+      enum: [meeting, english, interview]
+    MeetingStatus:
+      type: string
+      enum: [uploaded, transcribing, summarizing, completed, failed]
+    Meeting:
+      type: object
+      required: [id, mode, status, recorded_at, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: [string, 'null'] }
+        mode: { $ref: '#/components/schemas/MeetingMode' }
+        status: { $ref: '#/components/schemas/MeetingStatus' }
+        recorded_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        duration_seconds: { type: [integer, 'null'], minimum: 0 }
+        transcript: { type: [string, 'null'] }
+        summary: { type: [string, 'null'] }
+        error: { anyOf: [{ $ref: '#/components/schemas/Error' }, { type: 'null' }] }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }

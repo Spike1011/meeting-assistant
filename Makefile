@@ -1,58 +1,46 @@
-.PHONY: all install run setup api clean help
+.PHONY: help server-install server-api server-run server-setup server-check infra-up infra-down clean
 
-# Variables
-VENV = venv
-PYTHON = $(VENV)/bin/python3
-PIP = $(VENV)/bin/pip
-
-all: help
+SERVER_DIR := apps/server
+SERVER_VENV := $(SERVER_DIR)/.venv
+SERVER_PYTHON := $(SERVER_VENV)/bin/python3
+SERVER_PIP := $(SERVER_VENV)/bin/pip
 
 help:
-	@echo "Meeting Assistant - Management Commands"
-	@echo "---------------------------------------"
-	@echo "make install  - Create venv and install dependencies"
-	@echo "make run      - Start recording (CLI)"
-	@echo "make setup    - Run interactive audio device setup"
-	@echo "make api      - Start Web API server"
-	@echo "make clean    - Remove virtual environment and temporary files"
+	@echo "Meeting Assistant monorepo"
+	@echo "  make server-install  Install Python dependencies"
+	@echo "  make server-api      Start the FastAPI service"
+	@echo "  make server-run      Run the legacy macOS CLI"
+	@echo "  make server-setup    Configure the legacy recorder"
+	@echo "  make server-check    Compile-check Python sources"
+	@echo "  make infra-up        Start the API with Docker Compose"
+	@echo "  make infra-down      Stop Docker Compose services"
 
-$(VENV)/bin/activate: requirements.txt
-	@echo "[*] Creating virtual environment..."
-	python3 -m venv $(VENV)
-	@echo "[*] Installing dependencies (this may take a few minutes for PyObjC)..."
-	$(PIP) install --upgrade pip
-	$(PIP) install -r requirements.txt
-	@touch $(VENV)/bin/activate
+$(SERVER_VENV)/bin/activate: $(SERVER_DIR)/requirements.txt
+	python3 -m venv $(SERVER_VENV)
+	$(SERVER_PIP) install --upgrade pip
+	$(SERVER_PIP) install -r $(SERVER_DIR)/requirements.txt
+	@touch $(SERVER_VENV)/bin/activate
 
-install: $(VENV)/bin/activate
-	@if [ ! -f .env ]; then \
-		if [ -f .env.example ]; then \
-			echo "[*] Creating .env from .env.example..."; \
-			cp .env.example .env; \
-		else \
-			echo "[*] .env.example not found. Creating a blank .env..."; \
-			echo "DEEPGRAM_API_KEY=" > .env; \
-			echo "GEMINI_API_KEY=" >> .env; \
-		fi; \
-		echo "[!] Please edit .env and add your API keys!"; \
-	fi
-	@echo "[+] Installation complete."
+server-install: $(SERVER_VENV)/bin/activate
+	@if [ ! -f $(SERVER_DIR)/.env ] && [ -f $(SERVER_DIR)/.env.example ]; then cp $(SERVER_DIR)/.env.example $(SERVER_DIR)/.env; fi
 
-run: install
-	@$(PYTHON) main.py
+server-api: server-install
+	@cd $(SERVER_DIR) && .venv/bin/python3 api.py
 
-setup: install
-	@$(PYTHON) main.py --setup
+server-run: server-install
+	@cd $(SERVER_DIR) && .venv/bin/python3 main.py
 
-api: install
-	@$(PYTHON) api.py
+server-setup: server-install
+	@cd $(SERVER_DIR) && .venv/bin/python3 main.py --setup
+
+server-check:
+	@python3 -m compileall -q $(SERVER_DIR)
+
+infra-up:
+	docker compose -f infra/compose.yaml up --build
+
+infra-down:
+	docker compose -f infra/compose.yaml down
 
 clean:
-	@echo "[*] Cleaning up..."
-	rm -rf $(VENV)
-	rm -rf __pycache__
-	rm -rf core/__pycache__
-	rm -rf core/recorders/__pycache__
-	rm -rf core/utils/__pycache__
-	rm -rf .pytest_cache
-	@echo "[+] Cleanup complete."
+	rm -rf $(SERVER_VENV) $(SERVER_DIR)/__pycache__ $(SERVER_DIR)/core/**/__pycache__

@@ -1,0 +1,7 @@
+deepgram-sdk
+python-dotenv
+google-generativeai
+google-genai
+fastapi
+uvicorn[standard]
+python-multipart
