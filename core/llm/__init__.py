@@ -4,6 +4,7 @@ from .base import LLMProvider
 from .gemini_provider import GeminiProvider
 from .deepseek_provider import DeepSeekProvider
 from .chatgpt_provider import ChatGPTProvider
+from .local_provider import LocalProvider
 from core.config_manager import ConfigManager
 
 
@@ -18,6 +19,8 @@ def _default_model_for_provider(provider_type: str) -> str:
         return "deepseek-chat"
     if provider_type == "chatgpt":
         return "gpt-4o"
+    if provider_type == "local":
+        return "Qwen3:latest"
     return ""
 
 
@@ -55,5 +58,11 @@ def create_llm_provider(
         return DeepSeekProvider(api_key=api_key, model_name=model_name)
     elif provider_type == "chatgpt":
         return ChatGPTProvider(api_key=api_key, model_name=model_name)
+    elif provider_type == "local":
+        return LocalProvider(
+            api_key=api_key,
+            model_name=model_name,
+            base_url=config.get_local_llm_base_url(),
+        )
     else:
         raise ValueError(f"Unknown LLM provider: {provider_type}")

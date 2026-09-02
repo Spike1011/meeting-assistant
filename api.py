@@ -35,6 +35,7 @@ class LLMProviderName(str, Enum):
     gemini = "gemini"
     deepseek = "deepseek"
     chatgpt = "chatgpt"
+    local = "local"
 
 
 class SummarizationMode(str, Enum):
@@ -221,7 +222,7 @@ async def process_audio(
 )
 async def summarize_transcript(
     file: UploadFile = File(..., description="Текстовый файл транскрипции (.txt, .md и т.п.)"),
-    provider: LLMProviderName = LLMProviderName.gemini,
+    provider: LLMProviderName = LLMProviderName.local,
     mode: SummarizationMode = SummarizationMode.meeting,
     download: bool = False,
 ):

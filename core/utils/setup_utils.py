@@ -48,6 +48,7 @@ def interactive_setup(config: ConfigManager):
     print("-" * 60)
     
     llm_options = [
+        ("local", "Qwen3:latest", "Local Qwen3 via Ollama/OpenAI-compatible API"),
         ("deepseek", "deepseek-chat", "DeepSeek V3 (Recommended, requires DEEPSEEK_API_KEY)"),
         ("deepseek", "deepseek-reasoner", "DeepSeek R1 (Thinking Model)"),
         ("chatgpt", "gpt-4o", "ChatGPT 4o (Requires OPENAI_API_KEY)"),

@@ -30,6 +30,7 @@
   - [Gemini API Key](https://aistudio.google.com/) (Опционально)
   - [DeepSeek API Key](https://platform.deepseek.com/) (Опционально)
   - [OpenAI API Key](https://platform.openai.com/) (Опционально)
+  - Локальная Qwen3 через Ollama или другой OpenAI-совместимый сервер (по умолчанию `http://localhost:11434/v1`)
 
 ## 🚀 Быстрый старт (через Makefile)
 
@@ -45,6 +46,9 @@ make install
 # DEEPSEEK_API_KEY=...
 # OPENAI_API_KEY=...
 # GEMINI_API_KEY=...
+# Для локального сервера с API, совместимым с OpenAI (например, Ollama):
+# LOCAL_LLM_BASE_URL=http://localhost:11434/v1
+# LOCAL_LLM_API_KEY=...  # не нужен для Ollama
 
 # 3. Запуск записи
 make run
@@ -64,6 +68,11 @@ make run
 > **⚠️ Важно**: В целях безопасности API ключи теперь считываются **только** из файла `.env`. Файл `config.json` используется только для нечувствительных настроек.
 
 ## ⚙️ Настройка и первый запуск
+
+По умолчанию саммари создаёт локальная `Qwen3:latest` через OpenAI-совместимый API на
+`http://localhost:11434/v1`. Если ваша Qwen3 запущена в LM Studio, vLLM или на
+другом адресе, задайте `LOCAL_LLM_BASE_URL` в `.env`. Имя модели при необходимости
+меняется в `llm.model` файла `config.json`.
 
 ### Автоматическая настройка
 
@@ -151,7 +160,7 @@ python api.py
   Принимает **готовый текстовый файл транскрипции** (например, `*.txt` или `*.md`) и делает только саммаризацию без повторной транскрибации.  
   В Swagger UI можно:
   - загрузить файл транскрипта,
-  - выбрать провайдера модели (`gemini`, `deepseek`, `chatgpt`) из выпадающего списка,
+  - выбрать провайдера модели (`local`, `gemini`, `deepseek`, `chatgpt`) из выпадающего списка,
   - указать режим суммаризации (`meeting`, `english`, `interview`),
   - при необходимости выставить флаг `download=true`, чтобы получить результат как `.md`‑файл,
   - нажать кнопку **Execute** для запуска саммаризации.

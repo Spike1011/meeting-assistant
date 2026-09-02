@@ -14,7 +14,27 @@ Focus on:
 - Key decisions made
 - Action items and tasks assigned to participants
 
-The transcript may contain multiple speakers. Try to identify speakers and assign tasks accordingly."""
+SPEAKER IDENTIFICATION:
+- First build a mapping from every `Speaker N` label to a person's name only when
+  the transcript provides direct, unambiguous evidence: a self-introduction
+  ("я Маша") or a direct address from another speaker followed by that speaker's
+  reply. A name mentioned by the same speaker while talking about someone else is
+  never evidence of that speaker's identity.
+- Do not use the names of people merely being discussed as the speaker's name.
+- Do not invent names. If evidence is weak or conflicting, keep `Спикер N` and
+  omit the name.
+- Never output a tentative name, a question mark, or wording such as "вероятно"
+  next to a speaker. A name is either confident enough to show or omitted.
+- Never infer a name from gender, role, speaking style, or a similar-sounding
+  word. Do not expand or change name forms: for example, "Миш" is not evidence
+  for either "Миша" or "Маша".
+- In the summary, write an identified speaker as `Спикер N (Имя)`. Use that
+  format next to every attributed task, decision, and important quote.
+- Add a `## Участники` section listing only confident mappings and their evidence,
+  for example `- Спикер 0 — Маша; основание: «я Маша» [00:12]`. If no mapping has
+  direct evidence, write only `- Не указано`.
+
+Return plain Markdown only; never wrap the entire answer in a code block."""
 
     def get_user_prompt_template(self) -> str:
         """Returns the user prompt template for meeting mode."""
@@ -28,6 +48,9 @@ Please provide a concise summary in Markdown format with the following sections:
 ## Дата и время встречи
 {date_str}
 
+## Участники
+- Спикер N — Имя; основание: точная цитата и тайм-код (только при прямом подтверждении)
+
 ## Ключевые темы
 - (List of main topics discussed)
 
@@ -35,7 +58,8 @@ Please provide a concise summary in Markdown format with the following sections:
 - (List of agreed decisions)
 
 ## Задачи
-- [ ] Спикер N (если возможно определить) - (Task description)
+- [ ] Спикер N (Имя, если подтверждено) — (Task description)
 
 If any section is not applicable, state "Не указано" or "Нет".
-Try to assign tasks to specific speakers based on the conversation context."""
+First infer the speaker-to-name mapping from the entire transcript, then use it
+consistently. Try to assign tasks to specific speakers based on the conversation context."""

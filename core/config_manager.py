@@ -25,8 +25,9 @@ class ConfigManager:
             "timeout": 600
         },
         "llm": {
-            "provider": "deepseek",
-            "model": "deepseek-chat"
+            "provider": "local",
+            "model": "Qwen3:latest",
+            "base_url": "http://localhost:11434/v1"
         }
     }
     
@@ -130,12 +131,18 @@ class ConfigManager:
         return self.config.get("llm", self.DEFAULT_CONFIG["llm"])
     
     def get_llm_provider_type(self) -> str:
-        """Get LLM provider type (gemini/deepseek)."""
-        return self.get_llm_settings().get("provider", "gemini")
+        """Get LLM provider type."""
+        return self.get_llm_settings().get("provider", "local")
     
     def get_llm_model_name(self) -> str:
         """Get LLM model name."""
-        return self.get_llm_settings().get("model", "gemini-2.0-flash")
+        return self.get_llm_settings().get("model", "Qwen3:latest")
+
+    def get_local_llm_base_url(self) -> str:
+        """Get the endpoint of the OpenAI-compatible local LLM server."""
+        return os.getenv("LOCAL_LLM_BASE_URL") or self.get_llm_settings().get(
+            "base_url", "http://localhost:11434/v1"
+        )
 
     def get_llm_api_key(self, provider: str = None) -> Optional[str]:
         """
@@ -150,6 +157,9 @@ class ConfigManager:
             return self.get_deepseek_api_key()
         elif provider == "chatgpt":
             return self.get_openai_api_key()
+        elif provider == "local":
+            # Ollama does not require an API key; OpenAI-compatible servers may use one.
+            return os.getenv("LOCAL_LLM_API_KEY") or "local"
         return None
 
     def set_llm_provider(self, provider: str, model: str) -> None:

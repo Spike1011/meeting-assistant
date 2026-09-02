@@ -15,5 +15,10 @@
         "diarize": true,
         "smart_format": true,
         "timeout": 600
+    },
+    "llm": {
+        "provider": "local",
+        "model": "Qwen3:latest",
+        "base_url": "http://localhost:11434/v1"
     }
 }
