@@ -16,7 +16,7 @@ except ImportError:
 class GeminiProvider(LLMProvider):
     """Generates meeting summaries via Google Gemini."""
 
-    def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash", max_retries: int = 3):
+    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash", max_retries: int = 3):
         super().__init__(api_key, model_name)
         self.max_retries = max_retries
         
@@ -80,12 +80,10 @@ class GeminiProvider(LLMProvider):
                             return response.text
                     except Exception as e:
                         error_str = str(e)
-                        # 404 or 429 Handle - specific fallback logic for Gemini 2.0 Flash
-                        if (("404" in error_str) or ("429" in error_str)) and self.model_name == 'gemini-2.0-flash':
-                            print(f"[!] Gemini 2.0 Flash issue, falling back to gemini-flash-latest")
-                            # Create a temporary fallback instance or just change model name
-                            # Changing model name locally for retry
-                            self.model_name = 'gemini-flash-latest'
+                        # Use the current low-cost model if 2.5 Flash itself is unavailable.
+                        if "404" in error_str and self.model_name == 'gemini-2.5-flash':
+                            print(f"[!] Gemini 2.5 Flash is unavailable, falling back to gemini-2.5-flash-lite")
+                            self.model_name = 'gemini-2.5-flash-lite'
                             return self.summarize(transcript, meeting_datetime, mode)
                         
                         # If even fallback is exhausted, we need to wait
@@ -104,10 +102,10 @@ class GeminiProvider(LLMProvider):
                         response = self.model.generate_content(full_prompt)
                         return response.text
                     except Exception as e:
-                         # Fallback for legacy if 2.0 fails
-                        if "404" in str(e) and self.model_name == 'gemini-2.0-flash':
-                             print(f"[!] Gemini 2.0 Flash stable not available, trying 1.5 flash")
-                             self.model_name = 'gemini-1.5-flash'
+                        # Fallback for legacy clients if 2.5 Flash is unavailable.
+                        if "404" in str(e) and self.model_name == 'gemini-2.5-flash':
+                             print(f"[!] Gemini 2.5 Flash is unavailable, trying 2.5 Flash-Lite")
+                             self.model_name = 'gemini-2.5-flash-lite'
                              self.model = genai.GenerativeModel(self.model_name)
                              # Retry immediately
                              continue
@@ -118,7 +116,8 @@ class GeminiProvider(LLMProvider):
                 
                 # Check if it's a retryable error
                 is_retryable = any(keyword in error_msg.lower() for keyword in [
-                    'connection', 'timeout', 'network', 'temporary', '429', 'quota'
+                    'connection', 'timeout', 'network', 'temporary', '429', 'quota',
+                    '503', 'unavailable', 'resource_exhausted'
                 ])
                 
                 if attempt < self.max_retries - 1 and is_retryable:

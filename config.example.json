@@ -17,8 +17,7 @@
         "timeout": 600
     },
     "llm": {
-        "provider": "local",
-        "model": "Qwen3:latest",
-        "base_url": "http://localhost:11434/v1"
+        "provider": "gemini",
+        "model": "gemini-2.5-flash"
     }
 }

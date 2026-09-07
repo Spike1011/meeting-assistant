@@ -48,13 +48,13 @@ def interactive_setup(config: ConfigManager):
     print("-" * 60)
     
     llm_options = [
+        ("gemini", "gemini-2.5-flash", "Gemini 2.5 Flash (Free tier available)"),
         ("local", "Qwen3:latest", "Local Qwen3 via Ollama/OpenAI-compatible API"),
         ("deepseek", "deepseek-chat", "DeepSeek V3 (Recommended, requires DEEPSEEK_API_KEY)"),
         ("deepseek", "deepseek-reasoner", "DeepSeek R1 (Thinking Model)"),
         ("chatgpt", "gpt-4o", "ChatGPT 4o (Requires OPENAI_API_KEY)"),
         ("chatgpt", "gpt-4o-mini", "ChatGPT 4o-mini (Faster/Cheaper)"),
-        ("gemini", "gemini-2.0-flash", "Gemini 2.0 Flash (Fast)"),
-        ("gemini", "gemini-1.5-flash", "Gemini 1.5 Flash (Legacy)")
+        ("gemini", "gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Faster fallback)")
     ]
     
     print("\nAvailable Models:")

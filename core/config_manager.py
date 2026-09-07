@@ -25,9 +25,8 @@ class ConfigManager:
             "timeout": 600
         },
         "llm": {
-            "provider": "local",
-            "model": "Qwen3:latest",
-            "base_url": "http://localhost:11434/v1"
+            "provider": "gemini",
+            "model": "gemini-2.5-flash"
         }
     }
     
@@ -132,11 +131,11 @@ class ConfigManager:
     
     def get_llm_provider_type(self) -> str:
         """Get LLM provider type."""
-        return self.get_llm_settings().get("provider", "local")
+        return self.get_llm_settings().get("provider", "gemini")
     
     def get_llm_model_name(self) -> str:
         """Get LLM model name."""
-        return self.get_llm_settings().get("model", "Qwen3:latest")
+        return self.get_llm_settings().get("model", "gemini-2.5-flash")
 
     def get_local_llm_base_url(self) -> str:
         """Get the endpoint of the OpenAI-compatible local LLM server."""

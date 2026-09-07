@@ -69,10 +69,10 @@ make run
 
 ## ⚙️ Настройка и первый запуск
 
-По умолчанию саммари создаёт локальная `Qwen3:latest` через OpenAI-совместимый API на
-`http://localhost:11434/v1`. Если ваша Qwen3 запущена в LM Studio, vLLM или на
-другом адресе, задайте `LOCAL_LLM_BASE_URL` в `.env`. Имя модели при необходимости
-меняется в `llm.model` файла `config.json`.
+По умолчанию саммари создаёт `gemini-2.5-flash`. Для него нужен `GEMINI_API_KEY` в
+`.env`. Локальная Qwen3 остаётся доступна через OpenAI-совместимый API на
+`http://localhost:11434/v1`; при необходимости выберите провайдера `local` и укажите
+`LOCAL_LLM_BASE_URL` в `.env`.
 
 ### Автоматическая настройка
 
@@ -95,7 +95,7 @@ Available Models:
     1. deepseek-chat (deepseek) - DeepSeek V3 (Recommended)
     2. deepseek-reasoner (deepseek) - DeepSeek R1
     3. gpt-4o (chatgpt) - ChatGPT 4o
-    4. gemini-2.0-flash (gemini) - Gemini 2.0 Flash
+    4. gemini-2.5-flash (gemini) - Gemini 2.5 Flash
     ...
 Select model number (1-6) [default: 1]:
 ```

@@ -14,7 +14,7 @@ def _default_model_for_provider(provider_type: str) -> str:
     когда выбран провайдер, отличный от того, что прописан в config.json.
     """
     if provider_type == "gemini":
-        return "gemini-2.0-flash"
+        return "gemini-2.5-flash"
     if provider_type == "deepseek":
         return "deepseek-chat"
     if provider_type == "chatgpt":
@@ -35,7 +35,7 @@ def create_llm_provider(
 
     Важно: если в API запрашивается провайдер, отличный от того, что в config.json,
     и модель не указана явно, берётся дефолтная модель для этого провайдера,
-    чтобы избежать ситуаций вида 'gemini-2.0-flash' в OpenAI/DeepSeek.
+    чтобы избежать ситуаций вида 'gemini-2.5-flash' в OpenAI/DeepSeek.
     """
     config_provider = config.get_llm_provider_type()
 
